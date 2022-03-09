@@ -1,0 +1,100 @@
+Timpuriu Mircea
+ 
+Am folosit fisierul de functii ajutatoare buffer.c pentru a putea lega 
+mesajul complet primit de la server dupa o comanda. 
+In fisierul helpers.c, gasim functii ajutatoare, cele care transmit si 
+primesc mesaje catre si de la server. Fisierul requests.c preia informatiile 
+fie comenzii actuale (ex. username, password, id, titlu etc.), fie ale unor
+comenzi anterioare (cookie, token) pentru a crea cererile de POST, GET, 
+respectiv DELETE care urmeaza a fi trimise catre server. Iar in fisierul
+client.c se realizeaza programul propriu-zis, initializari de variabile,
+citirea de la tastatura a comenzilor, in unele cazuri parsarea acestora
+pentru a obtine informatii relevante si afisarea raspunsurilor.
+
+Parsarea JSON a input-ului este realizata manual, in functiile write_login
+(pentru trimiterea username-ului si a parolei pentru comenzile register si 
+login), respectiv write_book (pentru trimiterea informatiilor despre o 
+carte, pentru comanda add_book). Pentru parsarea raspunsurilor primite de 
+la server, am decis sa utilizez biblioteca de parsare parson pentru C.
+Functia json_parse_string transforma string-ul primit ca parametru
+intr-un obiect json sau o lista de obiecte json, functiile 
+json_value_get_array, json_array_get_count si json_array_get_object
+ajuta la impartirea unei liste json in obiectele componente, iar
+functiile json_object_get_string si json_object_get_number iau un
+obiect json si prelucreaza, respectiv afiseaza campurile acesteia.
+Implementarile acestor functii se gasesc in fisierul parson.c.
+
+Desi este mai lung in realitate, in afisarea la stdout, raspunsul serverului
+a fost trunchiat pentru a arata doar codul de raspuns de la server 
+(ex. 200 OK, 404 Not Found, 400 Bad Request etc.), respectiv parsarea din
+JSON in string fie a cookie-ului de sesiune, fie a token-ului JWT, fie
+a posibilelor erori care pot aparea. Afisarile se realizeaza fie in 
+else if-ul comenzii respective in client.c (in cazul comenzilor get_book si
+get_books), fie in functiile extract_cookie si extract_token (comenzile login,
+respectiv enter_library), fie in functia check_for_errors(comenzile register,
+add_book, delete_book, logout).
+
+In client.c, are loc un while infinit (care poate fi oprit doar de comanda 
+exit), unde la fiecare iteratie se va inchide si deschide conexiunea cu 
+serverul, in care se citeste comanda de la tastatura, si in functie de aceasta,
+se va lucra pe cazul respectiv de if-else:
+
+Comanda register:
+Se citesc de la tastatura username si password, se creeaza JSON in write_login,
+se trimite cererea POST si se afiseaza codul de raspuns de la server si
+eventuale erori, in functia check_for_errors.
+
+Comanda login:
+Se citesc de la tastatura username si password, se creeaza JSON in write_login,
+se trimite cererea POST. Din raspunsul serverului se va extrage cookie-ul de 
+sesiune, in functia extract_cookie, si se afiseaza codul de raspuns de la server 
+si cookie-ul de sesiune, care va fi salvat pentru eventuala utilizare, sau 
+eventuale erori.
+
+Comanda enter_library:
+Cererea GET trimisa pentru aceasta comanda va contine si cookie de sesiune, daca 
+acesta exista in acel moment. Din raspunsul serverului se va extrage token-ul
+JWT, in functia extract_token, si se afiseaza codul de raspuns de la 
+server si token-ul JWT, care va fi salvat pentru eventuala utilizare, 
+sau eventuale erori.
+
+Comanda get_books:
+Cererea GET trimisa pentru aceasta comanda va contine si cookie de sesiune si 
+token JWT, daca acestea exista in acel moment. Din raspunsul serverului se
+va extrage lista de obiecte JSON, se va parsa, si se afiseaza codul de 
+raspuns de la server si lista de obiecte, intr-un format human-readable,
+sau eventuale erori. 
+
+Comanda get_book:
+Se citeste ID-ul de la tastatura, care va fi folosit in determinarea adresei
+la care se va face cererea de GET. Cererea trimisa pentru aceasta comanda va 
+contine si cookie de sesiune si token JWT, daca acestea exista in acel moment. 
+Din raspunsul serverului se va extrage lista de obiecte JSON, se va parsa, si 
+se afiseaza codul de raspuns de la server si lista de obiecte, intr-un format 
+human-readable, sau eventuale erori. 
+
+Comanda add_book:
+Se citesc de la tastatura informatiile despre carte, se creeaza JSON in write_book,
+se trimite cererea POST. Se afiseaza codul de raspuns de la server, sau 
+eventuale erori, in functia check_for_errors.
+
+Comanda delete_book:
+Se citeste de la tastatura ID-ul despre carte, care va fi folosit in determinarea
+adresei la care se trimite cererea DELETE. Se afiseaza codul de raspuns de la 
+server, sau eventuale erori, in functia check_for_errors.
+
+Comanda logout:
+Se trimite cererea get catre server, si se afiseaza codul de raspuns de la
+server, sau eventuale erori, in functia check_for_errors. De asemenea, in 
+aceasta functie, se golesc string-urile care retin cookie-ul de sesiune,
+respectiv token-ul de intrare in biblioteca, deoarece nu vor mai fi de folos.
+
+Comanda exit:
+Aceasta comanda inchide conexiunea, determina iesirea din loop-ul while 
+infinit, si determina iesirea din program (return 0).
+ 
+
+
+
+
+ 
